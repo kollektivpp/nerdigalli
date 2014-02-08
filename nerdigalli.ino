@@ -4,17 +4,19 @@
 //
 
 
+#include "Ultrasonic.h"
 #include <LiquidCrystal.h>
 char ch;
 
 const int contrast = 15; // display contrast
 const int player = 2; // number of players
-const int space = 1000; // space between the players / between player one and the sensor (in millimeters)
-const int interval = 1000; // interval between display changes in milliseconds
-const int ignoredDistance = 1000; // the sensor ignores everything above this distance (in millimeters)
+const int space = 20; // space between the players / between player one and the sensor (in centimeter)
+const int interval = 2000; // interval between display changes in milliseconds
+const int ignoredDistance = 80; // the sensor ignores everything above this distance (in cent)
 
 // initialize the library with the numbers of the interface pins
 LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+Ultrasonic ultrasonic(13,10);
 
 // colors
 const int LED_red = 8;
@@ -23,6 +25,7 @@ const int LED_green = 7;
 // game options
 char displayString[] = "x x x x x"; // = "x x x x x" as start value
 int numberOfChangedSteps = 0;
+int sensorDistance = 1000;
 boolean finished = false; //game is finished
 boolean isRedOn = 0;
 boolean isGreenOn = 0;
@@ -31,48 +34,43 @@ int intervenedPlayer = 0;
 void setup() 
 {
   Serial.begin(9600);
-  Serial.println("LCD test with PWM contrast adjustment");
+
   pinMode(13,OUTPUT);
-  pinMode(8,OUTPUT);
-  pinMode(7,OUTPUT);
+  pinMode(LED_red,OUTPUT);
+  pinMode(LED_green,OUTPUT);
   analogWrite(6,contrast);
   analogWrite(9,28836);
   
   randomSeed(analogRead(0));
 
   // set up the LCD's number of columns and rows: 
-  lcd.begin(16, 3);
-  // Print a message to the LCD.
+  lcd.begin(16, 4);
+  // Print heading
   lcd.print("#### NERDIGALLI ####");
+  showStartSequenz();
 }
 
 void loop() 
 {
-  if ((millis()/interval) > numberOfChangedSteps) {
-    setNewValues();
-  }
-
-  if (/*TODO: sensor value*/ > ignoredDistance) {
-    intervenedPlayer = getIntervenedPlayerNumber(/*TODO: sensor value*/sensorDistance);
-    calculateResult();
-  }
+  if(!finished) {
+    sensorDistance = ultrasonic.Ranging(CM);
+    
+    if ((millis()/interval) > numberOfChangedSteps) {
+      setNewValues();
+    }
   
-  lcd.setCursor(5, 2);
-  lcd.print(displayString);
-}
-
-void serialEvent() {
-  if (Serial.available()) {
-    ch= Serial.read();
-    
-    if(ch=='N') {
-      analogWrite(9,28836);
+    if (sensorDistance < ignoredDistance) {
+      intervenedPlayer = ceil(sensorDistance / space) + 1;
+      calculateResult();
     }
     
-    if(ch=='F') {
-      analogWrite(9,0);
-    }
-
+    lcd.setCursor(5, 2);
+    lcd.print(displayString);
+  } else {
+    clearDisplay();
+    showStartSequenz();
+    delay(1000);
+    finished = false;
   }
 }
 
@@ -85,20 +83,19 @@ void setNewValues() {
   isRedOn = random(0, 2);
   isGreenOn = random(0, 2);
   
-  if(isRedOn) {
-    digitalWrite(8,HIGH);
+  if(isRedOn == 1) {
+    digitalWrite(LED_red,HIGH);
   } else {
-    digitalWrite(8,LOW);
+    digitalWrite(LED_red,LOW);
   }
   
-  if(isGreenOn) {
-    digitalWrite(7,HIGH);
+  if(isGreenOn == 1) {
+    digitalWrite(LED_green,HIGH);
   } else {    
-    digitalWrite(7,LOW);
+    digitalWrite(LED_green,LOW);
   }
 
   numberOfChangedSteps++;
-  // Serial.println(numberOfChangedSteps);
 }
 
 void calculateResult()
@@ -108,7 +105,7 @@ void calculateResult()
   int numberOfBs = 0;
   int numberOfCs = 0;
 
-  for (int i = 0; i < displayString.length; i++) {
+  for (int i = 0; i < sizeof(displayString); i++) {
     switch (displayString[i]) {
         case 65:
           numberOfAs++;
@@ -119,8 +116,6 @@ void calculateResult()
         case 67:
           numberOfCs++;
           break;
-        default:
-          // do nothing
     }
   }
 
@@ -130,25 +125,17 @@ void calculateResult()
       numberOfBs == 3 ||
       numberOfCs == 3 )) {
 
+    Serial.println("Winner winner chicken dinner");
     winner = 1;
-
-    displayResultMessage(winner);
   }
+  
+  displayResultMessage(winner);
 }
 
-int getIntervenedPlayerNumber(int sensorDistance)
-{
-  for (int i = 1; i <= player; i++) {
-    if (i * space > sensorDistance) {
-      intervenedPlayer = i;
-    }
-  }
-}
-
-void displayResultMessage(gameIsWon)
+void displayResultMessage(boolean gameIsWon)
 {
   char resultString[] = "Player X is a ";
-  char resultTitle[6];
+  char resultTitle[7];
 
   switch (intervenedPlayer) {
       case 1:
@@ -163,22 +150,50 @@ void displayResultMessage(gameIsWon)
       case 4:
         resultString[7] = 52;
         break;
-      default:
-        // do something
   }
 
-  if (gameIsWon) {
+  if (gameIsWon) {    
       // Winner
-      resultTitle = "Winner";
+      String winnerString = "Winner";
+      winnerString.toCharArray(resultTitle, 7);
     } else {
       //Loser!
-      resultTitle = "Loser ";
+      String loserString = "loser";
+      loserString.toCharArray(resultTitle, 7);
     }
+    
+  lcd.setCursor(5, 1);
+  lcd.print(displayString);
   lcd.setCursor(5, 2);
   lcd.print(resultString);
   lcd.setCursor(5, 3);
   lcd.print(resultTitle);
-  lcd.setCursor(5, 1)
-  lcd.print(displayString);
-  delay(20000);
+  
+  finished = true;
+  delay(2000);
+}
+
+void showStartSequenz() {
+  delay(1000);
+  lcd.setCursor(9, 2);
+  lcd.print('3');
+  delay(1000);
+  lcd.setCursor(9, 2);
+  lcd.print('2');
+  delay(1000);
+  lcd.setCursor(9, 2);
+  lcd.print('1');
+  delay(1000);
+  lcd.setCursor(9, 2);
+  lcd.print("GO");
+  delay(1000);
+}
+
+void clearDisplay() {
+  lcd.setCursor(0, 1);
+  lcd.print("                    ");
+  lcd.setCursor(0, 2);
+  lcd.print("                    ");
+  lcd.setCursor(0, 3);
+  lcd.print("                    ");
 }
