@@ -23,6 +23,8 @@ const int LED_green = 7;
 char displayString[] = "x x x x x"; // = "x x x x x" as start value
 int numberOfChangedSteps = 0;
 boolean finished = false; //game is finished
+boolean isRedOn = 0;
+boolean isGreenOn = 0;
 
 void setup() 
 {
@@ -73,16 +75,16 @@ void setNewValues() {
     displayString[i*2] = randomValue;
   }
   
-  int isRedOn = random(0, 2);
-  int isGreenOn = random(0, 2);
+  isRedOn = random(0, 2);
+  isGreenOn = random(0, 2);
   
-  if(isRedOn == 1) {
+  if(isRedOn) {
     digitalWrite(8,HIGH);
   } else {
     digitalWrite(8,LOW);
   }
   
-  if(isGreenOn == 1) {
+  if(isGreenOn) {
     digitalWrite(7,HIGH);
   } else {    
     digitalWrite(7,LOW);
@@ -90,4 +92,9 @@ void setNewValues() {
 
   numberOfChangedSteps++;
   Serial.println(numberOfChangedSteps);
+}
+
+void calculateResult()
+{
+
 }
