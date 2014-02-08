@@ -96,5 +96,36 @@ void setNewValues() {
 
 void calculateResult()
 {
+  boolean winner = 0;
+  int numberOfAs = 0;
+  int numberOfBs = 0;
+  int numberOfCs = 0;
 
+  for (int i = 0; i < displayString.length; i++) {
+    switch (displayString[i]) {
+        case 65:
+          numberOfAs++;
+          break;
+        case 66:
+          numberOfBs++;
+          break;
+        case 67:
+          numberOfCs++;
+          break;
+        default:
+          // do nothing
+    }
+  }
+
+  // 
+  if (isRedOn == false &&
+      isGreenOn == true &&
+      (numberOfAs == 3 ||
+      numberOfBs == 3 ||
+      numberOfCs == 3 )) {
+
+    winner = 1;
+
+    displayResultMessage(winner);
+  }
 }
